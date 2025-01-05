@@ -129,6 +129,7 @@ class SkipList {
   Comparator const compare_;
   Arena* const arena_;  // Arena used for allocations of nodes
 
+  // 每一层的链表都有一个头节点
   Node* const head_;
 
   // Modified only by Insert().  Read racily by readers, but stale
@@ -136,6 +137,7 @@ class SkipList {
   std::atomic<int> max_height_;  // Height of the entire list
 
   // Read/written only by Insert().
+  // 随机数产生器，跳表插入哪一层是用概率论决定的
   Random rnd_;
 };
 
@@ -148,6 +150,7 @@ struct SkipList<Key, Comparator>::Node {
 
   // Accessors/mutators for links.  Wrapped in methods so we can
   // add the appropriate barriers as necessary.
+  // 获取当前节点在第 n 层 的后继节点
   Node* Next(int n) {
     assert(n >= 0);
     // Use an 'acquire load' so that we observe a fully initialized
@@ -173,12 +176,14 @@ struct SkipList<Key, Comparator>::Node {
 
  private:
   // Array of length equal to the node height.  next_[0] is lowest level link.
+  // 该层有该节点，则下面每一层都有，于是用一个数组记录下面每一层中的后继节点
   std::atomic<Node*> next_[1];
 };
 
 template <typename Key, class Comparator>
 typename SkipList<Key, Comparator>::Node* SkipList<Key, Comparator>::NewNode(
     const Key& key, int height) {
+  // 每次 NewNode 都要分配内存，节点的指针空间内存和高度有关
   char* const node_memory = arena_->AllocateAligned(
       sizeof(Node) + sizeof(std::atomic<Node*>) * (height - 1));
   return new (node_memory) Node(key);
